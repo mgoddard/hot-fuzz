@@ -226,6 +226,14 @@ to narrate that:
 an additional scoring input, which is the difference in the length of the provided
 query string and the actual value in the `grams` column.  This is used to, for example,
 boost the score for the row containing "LA Galaxy" relative to a row containing "LA Galaxy II".
+* The query predicate, `WHERE grams && CAST(:ngrams AS TEXT[])`, incorporates the `&&`
+(array overlap) operator.  Ideally, this operation would use the GIN index and,
+as of [this pull request](https://github.com/cockroachdb/cockroach/pull/77418),
+it will.
+* `qscore` just uses the results of `qbool` to determine a score based on the number
+of overlapping n-grams between the matching row and the query.
+* Finally, we just combine components of these CTEs with the `teams` table to generate
+a scored, ordered result to return to the client in JSON format (see the above example).
 
 ## The more general pattern
 

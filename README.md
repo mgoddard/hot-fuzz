@@ -257,8 +257,12 @@ deployed in Google Cloud Platform.
 
 * Install some prereq's (I like to use the `psql` CLI):
 ```bash
-sudo apt install postgresql-client-common
-sudo apt install postgresql-client
+sudo apt update
+sudo apt install postgresql-client-common -y
+sudo apt install postgresql-client -y
+sudo apt install python3-pip -y
+sudo apt-get install libpq-dev
+pip3 install -r requirements.txt
 ```
 
 * Deploy the latest CockroachDB binary (I'll use the beta since 22.1 hasn't yet shipped):
@@ -266,7 +270,7 @@ sudo apt install postgresql-client
 $ curl https://binaries.cockroachdb.com/cockroach-v22.1.0-beta.1.linux-amd64.tgz | tar xzvf -
 ```
 
-* Then start "demo" mode:
+* Then start "demo" mode (keep this terminal open to the CLI):
 ```bash
 $ ./cockroach-v22.1.0-beta.1.linux-amd64/cockroach demo
 ```
@@ -276,7 +280,7 @@ step:
 #     (sql)      postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require
 ```
 
-* Clone this GitHub repo:
+* In a new shell, clone this GitHub repo:
 ```bash
 $ git clone https://github.com/mgoddard/hot-fuzz.git
 ```
@@ -291,13 +295,73 @@ mgoddard@hot-fuzz:~/hot-fuzz$
 
 * Start up the Python Flask REST app:
 ```bash
-
+$ export DB_CONN_STR="postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require"
+$ ./trigrams.py
 ```
 
-* Load the data (the Perl script is included in this repo):
+* Back in the terminal with the CLI, run the DDL, enable and then set up the changefeed:
+```sql
+demo@127.0.0.1:26257/movr> CREATE TABLE teams
+(
+  id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID()
+  , name TEXT NOT NULL
+  , grams TEXT[]
+  , FAMILY f1 (id, name)
+  , FAMILY f2 (grams)
+);
+CREATE INDEX ON teams USING GIN (grams);
+
+demo@127.0.0.1:26257/movr> SET CLUSTER SETTING kv.rangefeed.enabled = TRUE;
+
+demo@127.0.0.1:26257/movr> CREATE CHANGEFEED FOR TABLE teams family "f1"
+INTO 'webhook-https://localhost:18080/cdc?insecure_tls_skip_verify=true'
+WITH updated, full_table_name, topic_in_value;
+```
+
+* In a third terminal, load the data (the Perl script is included in this repo):
 ```bash
-curl -s https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada | ./prep_teams_data.pl | psql postgres://root@localhost:26257/defaultdb
+$ cd hot-fuzz/
+$ export DB_CONN_STR="postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require"
+$ curl -s https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada | ./prep_teams_data.pl | psql $DB_CONN_STR
 ```
+
+* Finally, try out that `/search` endpoint:
+```bash
+$ $ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $name | base64 )/5 | ./pretty_print_json.py
+[
+  {
+    "name": "LA Galaxy",
+    "pk": "73b541c1-e3d4-4f1d-8598-bedc11200f03",
+    "score": "42.8571"
+  },
+  {
+    "name": "LA Galaxy II",
+    "pk": "3a3b0e44-68cc-45da-aa72-9467e46f0458",
+    "score": "10.7143"
+  },
+  {
+    "name": "LA Galaxy II",
+    "pk": "9303e054-d6ad-4793-b904-9e3eeba28ff9",
+    "score": "10.7143"
+  },
+  {
+    "name": "LA Giltinis",
+    "pk": "9b8bfbb4-1ac6-477d-aaed-79daf1183f02",
+    "score": "4.7619"
+  },
+  {
+    "name": "Tampa Mayhem",
+    "pk": "f566f12f-7f8d-4ae6-b04b-832a5f9025c5",
+    "score": "3.5714"
+  }
+]
+
+real	0m0.049s
+user	0m0.052s
+sys	0m0.008s
+```
+
+* That's it!
 
 ## Acknowledgements
 

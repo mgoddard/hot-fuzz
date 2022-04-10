@@ -3,7 +3,7 @@
 """
   Inspiration:
 
-    https://twitter.com/schrepfler/status/1512434401652654085?s=20&t=JwOC6W-CXvPVIFu-ua9Iyw
+    https://twitter.com/schrepfler/status/1512434401652654085
     https://www.postgresql.org/docs/current/pgtrgm.html
 
   Data:

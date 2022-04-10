@@ -17,9 +17,35 @@ would require additional time and expense to deploy and operate.
 
 ![tweet from April 8, 2022](./images/trigram_tweet_2022.04.08.png)
 
+## The experiment
+
+To begin with, CockroachDB isn't a fork of PostgreSQL, so you don't simply "bolt on"
+the usual Postgres extensions such as `pg_trgm`, the module mentioned in the tweet.  But
+this is a small obstacle and, in fact, offers the opportunity to demonstrate an up-and-coming
+feature of CockroachDB
+[_Enterprise Changefeeds_](https://www.cockroachlabs.com/docs/stable/create-changefeed.html),
+aka "CDC": the ability to configure a changefeed on a specific _column family_.  This feature
+is available in the `v22.1.0-beta.1` version I am using here -- this release should be
+generally available by mid-May 2022.
+
+## Acknowledgements
+
+The author wishes to thank the following for providing valuable input which made this blog
+post possible:
+
+* Dan Kelly, for mentioning the tweet which inspired the activity focused on n-grams
+* `@schrepfler`, for tagging `@CockroachDB` in the tweet about n-grams and fuzzy matching
+* Aaron Zinger, for a heads up about the upcoming changefeed support for column families
+* Rebecca Taft, for pushing on the PR for index acceleration of the `&&` operator
+* Rajiv Sharma, for providing that PR and for adding the final polish to it yesterday, so it could be merged
+* Jordan Lewis, for [taking up the trigram cause in the core of CockroachDB itself](https://m.twitch.tv/videos/1450106719)
+
 ## Reference
 
 * [The tweet](https://twitter.com/schrepfler/status/1512434401652654085)
 * [GIN (index) acceleration for `&&` operator](https://github.com/cockroachdb/cockroach/pull/77418)
-* [The film](https://www.rottentomatoes.com/m/hot_fuzz)
+* [Data](https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada)
+* [CockroachDB downloads](https://www.cockroachlabs.com/docs/releases/index.html)
+* [The `pg_trgm` module](https://www.postgresql.org/docs/current/pgtrgm.html)
+* [Hot Fuzz (film)](https://www.rottentomatoes.com/m/hot_fuzz)
 

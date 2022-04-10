@@ -117,8 +117,8 @@ def index_string(pk, content):
   run_statement(stmt)
 ```
 
-I won't get into the `run_statement(stmt)` function here, but refer interested readers to the code
-itself.
+I won't get into the `run_statement(stmt)` function here, but will instead refer interested readers
+to the code itself.
 
 * Here is the SQL statement we need to run to configure the changefeed, tying all of this together:
 ```sql
@@ -128,8 +128,8 @@ WITH updated, full_table_name, topic_in_value;
 ```
 Note that this operation requires an
 [Enterprise License](https://www.cockroachlabs.com/docs/v21.2/licensing-faqs#obtain-a-license),
-though I will make it a TODO to try this out on CockroachDB Serverless as soon as the 22.1
-upgrade is available there (mid-May).
+though I will make it a TODO to try this out on [CockroachDB Serverless](https://cockroachlabs.cloud/signup)
+as soon as the 22.1 release is available there.
 
 ### REST app: search / fuzzy matching
 
@@ -146,11 +146,6 @@ $ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $n
   },
   {
     "name": "LA Galaxy II",
-    "pk": "c1444e48-8b12-443f-8991-b66bdc54672f",
-    "score": "10.7143"
-  },
-  {
-    "name": "LA Galaxy II",
     "pk": "85b5b97a-9a6e-4cef-b63c-7cbe123eca07",
     "score": "10.7143"
   },
@@ -163,12 +158,17 @@ $ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $n
     "name": "Tampa Mayhem",
     "pk": "6f5fd5e0-6654-4385-9bd0-c191f4f1c5b4",
     "score": "3.5714"
+  },
+  {
+    "name": "Tampa Tarpons",
+    "pk": "1851c8e9-77e8-456b-a197-6aaed971942a",
+    "score": "2.8571"
   }
 ]
 
-real	0m0.145s
-user	0m0.066s
-sys	0m0.044s
+real	0m0.196s
+user	0m0.063s
+sys	0m0.043s
 ```
 
 Before getting into the Python code for the `/search` endpoint, the following are worthy of mention:
@@ -218,6 +218,14 @@ def do_search(q_base_64, limit):
     rv.append(d)
   return Response(json.dumps(rv), status=200, mimetype="application/json")
 ```
+
+There's a fair bit going on here, mostly within the SQL expresssion.  I'll do my best
+to narrate that:
+* There are two common table expressions (CTEs) which handle different aspects
+* `qbool` handles the boolean nature: is this row a match or not?  It also provides
+an additional scoring input, which is the difference in the length of the provided
+query string and the actual value in the `grams` column.  This is used to, for example,
+boost the score for the row containing "LA Galaxy" relative to a row containing "LA Galaxy II".
 
 ## The more general pattern
 

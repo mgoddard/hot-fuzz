@@ -270,10 +270,28 @@ $ curl https://binaries.cockroachdb.com/cockroach-v22.1.0-beta.1.linux-amd64.tgz
 ```bash
 $ ./cockroach-v22.1.0-beta.1.linux-amd64/cockroach demo
 ```
-In the output, you'll see a line like the following, which you'll use in the data load
+In the output, you'll see a line like the following, which you'll use in a couple of contexts:
 step:
 ```
 #     (sql)      postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require
+```
+
+* Clone this GitHub repo:
+```bash
+$ git clone https://github.com/mgoddard/hot-fuzz.git
+```
+
+* Make that repo your current working directory (the VM's hostname is also `hot-fuzz`):
+```bash
+mgoddard@hot-fuzz:~$ cd hot-fuzz/
+mgoddard@hot-fuzz:~/hot-fuzz$ ls
+LICENSE  README.md  images  prep_teams_data.pl  pretty_print_json.py  trigrams.py
+mgoddard@hot-fuzz:~/hot-fuzz$
+```
+
+* Start up the Python Flask REST app:
+```bash
+
 ```
 
 * Load the data (the Perl script is included in this repo):
@@ -300,5 +318,5 @@ post possible:
 * [Data](https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada)
 * [CockroachDB downloads](https://www.cockroachlabs.com/docs/releases/index.html)
 * [The `pg_trgm` module](https://www.postgresql.org/docs/current/pgtrgm.html)
-* [Hot Fuzz (film)](https://www.rottentomatoes.com/m/hot_fuzz)
+* [Hot Fuzz (film) provided the name for this repo](https://www.rottentomatoes.com/m/hot_fuzz)
 

@@ -116,13 +116,10 @@ def run_statement(stmt, has_result=False, use_aost=False):
       time.sleep(5)
 
 def get_ngrams(s, n=3):
-  return list(set([s[i:i+n] for i in range(len(s) - n+1)]))
+  return [s[i:i+n] for i in range(len(s) - n+1)]
 
 def tokenize(s):
-  rv = []
-  for t in get_ngrams(re.sub(r"[\W_]+", " ", s.lower())):
-    rv.append(t)
-  return rv
+  return get_ngrams(re.sub(r"[\W_]+", " ", s.lower()))
 
 def index_string(pk, content):
   ng = tokenize(content)

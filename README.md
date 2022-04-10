@@ -321,7 +321,7 @@ WITH updated, full_table_name, topic_in_value;
 * In a third terminal, load the data (the Perl script is included in this repo):
 ```bash
 $ cd hot-fuzz/
-$ export DB_CONN_STR="postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require"
+$ DB_CONN_STR="postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require"
 $ curl -s https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada | ./prep_teams_data.pl | psql $DB_CONN_STR
 ```
 

@@ -232,10 +232,21 @@ as of [this pull request](https://github.com/cockroachdb/cockroach/pull/77418),
 it will.
 * `qscore` just uses the results of `qbool` to determine a score based on the number
 of overlapping n-grams between the matching row and the query.
-* Finally, we just combine components of these CTEs with the `teams` table to generate
-a scored, ordered result to return to the client in JSON format (see the above example).
+* Finally, the results of these CTEs are combined with the `name` column from the
+`teams` table to generate an ordered result to return to the client in JSON
+format (see the above example).
 
 ## The more general pattern
+
+What I find interesting about this exercise is that this pattern of configuring a
+changefeed to route events through an external system, then back into the database
+has enormous potential, far beyond this fuzzy matching example.  It seems that
+development practices have evolved away from burying logic in the database and
+towards coding it in the languages most applicable to the problem; the emergence
+of microservices aligns with this trend.  That observation, combined with this
+new feature of being able to define a changefeed on a specific column family, has
+me convinced we'll see some very interesting applications of this pattern with
+CockroachDB.
 
 ## Acknowledgements
 

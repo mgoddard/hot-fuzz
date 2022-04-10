@@ -236,7 +236,7 @@ of overlapping n-grams between the matching row and the query.
 `teams` table to generate an ordered result to return to the client in JSON
 format (see the above example).
 
-## The more general pattern
+## An emerging pattern?
 
 What I find interesting about this exercise is that this pattern of configuring a
 changefeed to route events through an external system, then back into the database
@@ -247,6 +247,39 @@ of microservices aligns with this trend.  That observation, combined with this
 new feature of being able to define a changefeed on a specific column family, has
 me convinced we'll see some very interesting applications of this pattern with
 CockroachDB.
+
+## The HOWTO
+
+Here are some notes on how to replicate what I've shown above.  Given I've already done
+this, it's possible I'll leave out some step, so please let me know (GitHub issue is
+probably the simplest way).  I'm going to illustrate this using an Ubuntu VM I've just
+deployed in Google Cloud Platform.
+
+* Install some prereq's (I like to use the `psql` CLI):
+```bash
+sudo apt install postgresql-client-common
+sudo apt install postgresql-client
+```
+
+* Deploy the latest CockroachDB binary (I'll use the beta since 22.1 hasn't yet shipped):
+```bash
+$ curl https://binaries.cockroachdb.com/cockroach-v22.1.0-beta.1.linux-amd64.tgz | tar xzvf -
+```
+
+* Then start "demo" mode:
+```bash
+$ ./cockroach-v22.1.0-beta.1.linux-amd64/cockroach demo
+```
+In the output, you'll see a line like the following, which you'll use in the data load
+step:
+```
+#     (sql)      postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require
+```
+
+* Load the data (the Perl script is included in this repo):
+```bash
+curl -s https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the_United_States_and_Canada | ./prep_teams_data.pl | psql postgres://root@localhost:26257/defaultdb
+```
 
 ## Acknowledgements
 

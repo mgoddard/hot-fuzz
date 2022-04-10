@@ -43,8 +43,46 @@ as you have access to that data.
 If we envision the requirement arises out of an application's need to perform this type
 of matching, we can build a simple REST app which will:
 
-1. Provide a webhook endpoint that CockroachDB changefeeds will send events to
+1. Provide a webhook endpoint to which CockroachDB changefeeds will send events
 1. Provide a REST endpoint for _search_, returning a ranked list of the top-N closest team name matches
+
+Here's a first try at the DDL for a very simple table, the only table we'll need:
+```sql
+CREATE TABLE teams
+(
+  id UUID PRIMARY KEY DEFAULT GEN_RANDOM_UUID()
+  , name TEXT NOT NULL
+  , grams TEXT[]
+  , FAMILY f1 (id, name)
+  , FAMILY f2 (grams)
+);
+```
+
+And here's the inverted index on the `grams` column:
+```sql
+CREATE INDEX ON teams USING GIN (grams);
+```
+
+Now, we need the REST app.  I use Python for this since it's concise and easy to get up and running,
+and the Flask module works very well for REST apps.  And, I had some code fragments hanging around
+which I could reuse pretty easily.  The entire Python script [is here](./trigrams.py), but I'll
+focus on intersting aspects below.
+
+* Generating n-grams from strings:
+```python
+def get_ngrams(s, n=3):
+  return [s[i:i+n] for i in range(len(s) - n+1)]
+```
+
+For the input `la galaxy`, the return value is `['la ', 'a g', ' ga', 'gal', 'ala', 'lax', 'axy']`.
+The default value of `n` is 3, which aligns with the way `pg_trgm` works.
+
+A couple of things to point out:
+1. The text is lower case.  This is common in information retrieval applications, since all comparisons
+are typically done without regard to case.
+1. The ngrams show the result of sliding a window across the string, from left to right, yielding
+3-character sequences which can span the space between words.  This latter aspect factors in the
+adjacent words, so phrases are scored appropriately.
 
 
 

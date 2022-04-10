@@ -17,7 +17,7 @@ would require additional time and expense to deploy and operate.
 
 ![tweet from April 8, 2022](./images/trigram_tweet_2022.04.08.png)
 
-## The experiment
+## Background
 
 To begin with, CockroachDB isn't a fork of PostgreSQL, so you don't simply "bolt on"
 the usual Postgres extensions such as `pg_trgm`, the module mentioned in the tweet.  But
@@ -28,9 +28,31 @@ aka "CDC": the ability to configure a changefeed on a specific _column family_. 
 is available in the `v22.1.0-beta.1` version I am using here -- this release should be
 generally available by mid-May 2022.
 
+## The experiment
+
+### Desired state
+
+We do INSERT, UPDATE, DELETE on data about sports teams and would like to retrieve
+this data based on queries where we may misspell names.  I confess to having misread the tweet,
+interpreting it as pertaining to _sports team names_ as opposed to _sport events names_, so what
+I show here uses team name data, but I think it's easy to apply to event names as well, so long
+as you have access to that data.
+
+### How / what
+
+If we envision the requirement arises out of an application's need to perform this type
+of matching, we can build a simple REST app which will:
+
+1. Provide a webhook endpoint that CockroachDB changefeeds will send events to
+1. Provide a REST endpoint for _search_, returning a ranked list of the top-N closest team name matches
+
+
+
+## The more general pattern
+
 ## Acknowledgements
 
-The author wishes to thank the following for providing valuable input which made this blog
+The author wishes to thank the following individuals for providing valuable input which made this blog
 post possible:
 
 * Dan Kelly, for mentioning the tweet which inspired the activity focused on n-grams

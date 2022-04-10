@@ -38,15 +38,17 @@ interpreting it as pertaining to _sports team names_ as opposed to _sport events
 I show here uses team name data, but I think it's easy to apply to event names as well, so long
 as you have access to that data.
 
-### How / what
-
 If we envision the requirement arises out of an application's need to perform this type
 of matching, we can build a simple REST app which will:
 
 1. Provide a webhook endpoint to which CockroachDB changefeeds will send events
 1. Provide a REST endpoint for _search_, returning a ranked list of the top-N closest team name matches
 
-Here's a first try at the DDL for a very simple table, the only table we'll need:
+### DDL for the table
+
+Here's a first try at the DDL for a very simple table, the only table we'll need.
+The `FAMILY ...` parts of this enable the changefeed to generate events based solely
+on `FAMILY f1`, ignoring the resulting changes to `FAMILY f2`, which is what we need:
 ```sql
 CREATE TABLE teams
 (
@@ -63,6 +65,8 @@ And here's the inverted index on the `grams` column:
 CREATE INDEX ON teams USING GIN (grams);
 ```
 
+### REST app: CDC / indexing
+
 Now, we need the REST app.  I use Python for this since it's concise and easy to get up and running,
 and the Flask module works very well for REST apps.  And, I had some code fragments hanging around
 which I could reuse pretty easily.  The entire Python script [is here](./trigrams.py), but I'll
@@ -78,13 +82,142 @@ For the input `la galaxy`, the return value is `['la ', 'a g', ' ga', 'gal', 'al
 The default value of `n` is 3, which aligns with the way `pg_trgm` works.
 
 A couple of things to point out:
-1. The text is lower case.  This is common in information retrieval applications, since all comparisons
-are typically done without regard to case.
+1. The text is lower cased by a separate Python function.  This is common in information retrieval
+applications, since comparisons are typically done without regard to case.
 1. The ngrams show the result of sliding a window across the string, from left to right, yielding
 3-character sequences which can span the space between words.  This latter aspect factors in the
 adjacent words, so phrases are scored appropriately.
 
+* Webhook endpoint for the changefeed:
+```python
+@app.route('/cdc', methods = ['POST', 'GET'])
+def cdc_webhook():
+  obj = request.get_json(force=True)
+  print("CDC: " + json.dumps(obj)) # DEBUG
+  for o in obj["payload"]:
+    if o["after"] is None:
+      pass # Nothing to be done here
+    else:
+      pk = o["after"]["id"]
+      name = o["after"]["name"]
+      index_string(pk, name)
+  return "OK", 200
+```
 
+The changefeed will send an HTTP POST to this `/cdc` endpoint, as configured via the SQL expression
+(see below).  When that happens, JSON is accessible by the call to `request.get_json(force=True)`,
+and that JSON contains the current values of the `id` and `name` columns from the `teams` table.
+
+* Those values are passed to the `index_string(pk, name)` function, which just updates the `grams`
+colunn of the `teams` table:
+```python
+def index_string(pk, content):
+  ng = tokenize(content)
+  stmt = text("UPDATE teams SET grams = :grams WHERE id = :pk").bindparams(grams=ng, pk=pk)
+  run_statement(stmt)
+```
+
+I won't get into the `run_statement(stmt)` function here, but refer interested readers to the code
+itself.
+
+* Here is the SQL statement we need to run to configure the changefeed, tying all of this together:
+```sql
+CREATE CHANGEFEED FOR TABLE teams FAMILY "f1"
+INTO 'webhook-https://localhost:18080/cdc?insecure_tls_skip_verify=true'
+WITH updated, full_table_name, topic_in_value;
+```
+Note that this operation requires an
+[Enterprise License](https://www.cockroachlabs.com/docs/v21.2/licensing-faqs#obtain-a-license),
+though I will make it a TODO to try this out on CockroachDB Serverless as soon as the 22.1
+upgrade is available there (mid-May).
+
+### REST app: search / fuzzy matching
+
+A REST client can retrieve fuzzy matches for a given team name by doing something
+equivalent to this (this example was run on my MacBook; the `base64` command works
+differently here than it does on Linux; `pretty_print_json.py` is [here](./pretty_print_json.py)):
+```bash
+$ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $name | base64 )/5 | pretty_print_json.py 
+[
+  {
+    "name": "LA Galaxy",
+    "pk": "15e240a7-d1db-4b77-b454-c895a11610bf",
+    "score": "42.8571"
+  },
+  {
+    "name": "LA Galaxy II",
+    "pk": "c1444e48-8b12-443f-8991-b66bdc54672f",
+    "score": "10.7143"
+  },
+  {
+    "name": "LA Galaxy II",
+    "pk": "85b5b97a-9a6e-4cef-b63c-7cbe123eca07",
+    "score": "10.7143"
+  },
+  {
+    "name": "LA Giltinis",
+    "pk": "82b96763-6836-4ab8-84ad-1864a1f3e16d",
+    "score": "4.7619"
+  },
+  {
+    "name": "Tampa Mayhem",
+    "pk": "6f5fd5e0-6654-4385-9bd0-c191f4f1c5b4",
+    "score": "3.5714"
+  }
+]
+
+real	0m0.145s
+user	0m0.066s
+sys	0m0.044s
+```
+
+Before getting into the Python code for the `/search` endpoint, the following are worthy of mention:
+1. I deliberately misspelled the name of the team; "LA Galaxy" was the one I wanted.
+1. Even though the initial character, the 'P' in "PA Galuxy", was incorrect, the results were correct.
+This is one of the essential features of n-gram based matching -- you don't rely on the leading
+characters in the string to match.
+
+On to the Python part of this interaction:
+```python
+@app.route("/search/<q_base_64>/<int:limit>")
+def do_search(q_base_64, limit):
+  query_str = decode(q_base_64)
+  logging.info("Query: {}".format(query_str))
+  ng = tokenize(query_str)
+  logging.info("Query (n-grams): {}".format(ng))
+  sql = """
+  WITH qbool AS
+  (
+    SELECT id, grams, 1 + ABS(ARRAY_LENGTH(grams, 1) - ARRAY_LENGTH(CAST(:ngrams AS TEXT[]), 1)) delta
+    FROM teams
+    WHERE grams && CAST(:ngrams AS TEXT[])
+  ), qscore AS
+  (
+    SELECT id, COUNT(*) n FROM
+    (
+      SELECT id, UNNEST(grams) FROM qbool
+      INTERSECT
+      SELECT id, UNNEST(CAST(:ngrams AS TEXT[])) FROM qbool
+    )
+    GROUP BY id
+  )
+  SELECT qbool.id, t.name, 100*n/delta score
+  FROM qbool, qscore, teams t
+  WHERE qbool.id = qscore.id AND t.id = qbool.id
+  ORDER BY score DESC
+  LIMIT :max_rows;
+  """
+  stmt = text(sql).bindparams(ngrams=ng, max_rows=limit)
+  rv = []
+  for row in run_statement(stmt, True, False):
+    pk = str(row[0])
+    name = str(row[1])
+    score = float(row[2]/len(ng))
+    d = {}
+    (d["pk"], d["name"], d["score"]) = (pk, name, '{:.4f}'.format(score))
+    rv.append(d)
+  return Response(json.dumps(rv), status=200, mimetype="application/json")
+```
 
 ## The more general pattern
 

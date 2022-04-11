@@ -287,10 +287,9 @@ $ git clone https://github.com/mgoddard/hot-fuzz.git
 
 * Make that repo your current working directory (the VM's hostname is also `hot-fuzz`):
 ```bash
-mgoddard@hot-fuzz:~$ cd hot-fuzz/
-mgoddard@hot-fuzz:~/hot-fuzz$ ls
+$ cd hot-fuzz/
+$ ls
 LICENSE  README.md  images  prep_teams_data.pl  pretty_print_json.py  trigrams.py
-mgoddard@hot-fuzz:~/hot-fuzz$
 ```
 
 * Start up the Python Flask REST app:
@@ -327,7 +326,7 @@ $ curl -s https://en.wikipedia.org/wiki/List_of_professional_sports_teams_in_the
 
 * Finally, try out that `/search` endpoint:
 ```bash
-$ $ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $name | base64 )/5 | ./pretty_print_json.py
+$ name="PA Galuxy"; time curl -k -s https://localhost:18080/search/$( echo -n $name | base64 )/5 | ./pretty_print_json.py
 [
   {
     "name": "LA Galaxy",

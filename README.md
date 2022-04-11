@@ -274,8 +274,8 @@ $ curl https://binaries.cockroachdb.com/cockroach-v22.1.0-beta.1.linux-amd64.tgz
 ```bash
 $ ./cockroach-v22.1.0-beta.1.linux-amd64/cockroach demo
 ```
+
 In the output, you'll see a line like the following, which you'll use in a couple of contexts:
-step:
 ```
 #     (sql)      postgresql://demo:demo15932@127.0.0.1:26257/movr?sslmode=require
 ```

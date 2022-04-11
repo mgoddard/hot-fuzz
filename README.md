@@ -261,7 +261,7 @@ sudo apt update
 sudo apt install postgresql-client-common -y
 sudo apt install postgresql-client -y
 sudo apt install python3-pip -y
-sudo apt-get install libpq-dev
+sudo apt install libpq-dev -y
 pip3 install -r requirements.txt
 ```
 

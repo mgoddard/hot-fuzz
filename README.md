@@ -104,8 +104,8 @@ def cdc_webhook():
   return "OK", 200
 ```
 
-The changefeed will send an HTTP POST to this `/cdc` endpoint, as configured via the SQL expression
-(see below).  When that happens, JSON is accessible by the call to `request.get_json(force=True)`,
+The changefeed will send an HTTP POST to this `/cdc` endpoint, as configured via the SQL statement 
+shown below.  When that happens, JSON is accessible by the call to `request.get_json(force=True)`,
 and that JSON contains the current values of the `id` and `name` columns from the `teams` table.
 
 * Those values are passed to the `index_string(pk, name)` function, which just updates the `grams`
@@ -128,8 +128,8 @@ WITH updated, full_table_name, topic_in_value;
 ```
 Note that this operation requires an
 [Enterprise License](https://www.cockroachlabs.com/docs/v21.2/licensing-faqs#obtain-a-license),
-though I will make it a TODO to try this out on [CockroachDB Serverless](https://cockroachlabs.cloud/signup)
-as soon as the 22.1 release is available there.
+but is also available in the [single node "demo" mode](https://www.cockroachlabs.com/docs/stable/cockroach-demo.html)
+(see below).
 
 ### REST app: search / fuzzy matching
 
@@ -228,7 +228,7 @@ query string and the actual value in the `grams` column.  This is used to, for e
 boost the score for the row containing "LA Galaxy" relative to a row containing "LA Galaxy II".
 * The query predicate, `WHERE grams && CAST(:ngrams AS TEXT[])`, incorporates the `&&`
 (array overlap) operator.  Ideally, this operation would use the GIN index and,
-as of [this pull request](https://github.com/cockroachdb/cockroach/pull/77418),
+once [this pull request](https://github.com/cockroachdb/cockroach/pull/77418) is merged,
 it will.
 * `qscore` just uses the results of `qbool` to determine a score based on the number
 of overlapping n-grams between the matching row and the query.

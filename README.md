@@ -46,7 +46,7 @@ of matching, we can build a simple REST app which will:
 
 ### DDL for the table
 
-Here's a first try at the DDL for a very simple table, the only table we'll need.
+Here's the DDL for the table.
 The `FAMILY ...` parts of this enable the changefeed to generate events based solely
 on `FAMILY f1`, ignoring the resulting changes to `FAMILY f2`, which is what we need:
 ```sql
@@ -70,7 +70,7 @@ CREATE INDEX ON teams USING GIN (grams);
 Now, we need the REST app.  I use Python for this since it's concise and easy to get up and running,
 and the Flask module works very well for REST apps.  And, I had some code fragments hanging around
 which I could reuse pretty easily.  The entire Python script [is here](./trigrams.py), but I'll
-focus on intersting aspects below.
+focus on interesting aspects below.
 
 * Generating n-grams from strings:
 ```python

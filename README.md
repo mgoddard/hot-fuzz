@@ -363,6 +363,51 @@ sys	0m0.008s
 
 * That's it!
 
+## Great, but what's it gonna cost me?
+
+Good question.  Jim Hatcher asked this a few days ago, and it's a sensible question.  I hadn't
+checked this, so I created a test to try to answer that.  I started with
+[this set of 23k city names](https://github.com/datasets/world-cities/blob/master/data/world-cities.csv),
+from which I peeled off just the first column, yielding a list:
+
+```
+les Escaldes
+Andorra la Vella
+Umm al Qaywayn
+Ras al-Khaimah
+...
+```
+
+The total size of this name list was 232 kB.
+
+I then iterated through the following stages and captured, using `du -sk ./cockroach-data/`, the
+before and after size of the data directory.  Here are the stages, and the table shows the data
+size for each:
+
+1. The table had only the UUID column and the `name` column; the UUID column was the primary key
+so it was indexed
+1. Added the `grams` column (no GIN index yet)
+1. Added the GIN index on `grams`
+
+| Phase     | Data Size (kB) | Amplification Factor |
+| --------- | --------------:| --------------------:|
+| Text file | 232            | 1                    |
+| 1         | 2916           | 12.57                |
+| 2         | 24924          | 107.4                |
+| 3         | 186864         | 805.4                |
+
+The process of generating the n-grams (3-grams in this case) amplifies the data according to
+this relation, where `L` is the length of the string, and `N` would be `3`:
+```
+additional characters = N * (L - (N - 1))
+```
+
+So, the cost of storing and indexing these n-grams is non-trivial.  For a column containing
+first name, last name, a city or country name, or even an article title, this cost is probably
+going to be manageable.  For the full text of a document, it may be exessive.  There are
+also costs from the perspective of the user experience -- is the user able to retrieve the
+data she needs?  If not, how does that impact her experience, and what is the cost of that?
+
 ## Acknowledgements
 
 The author wishes to thank the following individuals for providing valuable input which made this blog
